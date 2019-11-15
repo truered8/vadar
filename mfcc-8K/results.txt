@@ -1,0 +1,4 @@
+Average accuracy: 0.9257883574889408
+Average validation accuracy: 0.7491646372390388
+Average loss: 0.33578530473179535
+Average validation loss: 0.8969312584960741

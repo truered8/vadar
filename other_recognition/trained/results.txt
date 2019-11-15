@@ -1,0 +1,5 @@
+Average accuracy: 0.769171424911734
+Average validation accuracy: 0.8066738872570898
+Average loss: 1.012193722852776
+Average validation loss: 0.9443635240649805
+Training took 2614.924585342407 seconds.
