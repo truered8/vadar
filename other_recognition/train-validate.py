@@ -9,8 +9,11 @@ from keras.utils import to_categorical
 from keras import regularizers
 from sklearn.utils import class_weight
 
+# Path to save model
+SAVE_PATH = 'models/new1.h5'
+
 # Path to save graphs and results
-PATH = 'trained_2'
+PATH = 'graphs/new_1'
 
 labels = ['car_horn', 'dog_bark', 'gun_shot', 'siren', 'speech']
 
@@ -132,6 +135,7 @@ if __name__ == '__main__':
 		# Train model
 		model, epochs, batch_size, verbose = get_model()
 		history = model.fit(X_train, y_train_hot, batch_size=batch_size, epochs=epochs, verbose=verbose, class_weight=class_weights, validation_data=(X_test, y_test_hot))
+		model.save(SAVE_PATH)
 
 		# Add results to totals to calculate averages
 		acc += history.history['acc'][-1]

@@ -20,7 +20,7 @@ from sklearn.utils import class_weight
 import time
 
 # Path to save model
-SAVE_PATH = 'trained.h5'
+SAVE_PATH = 'models/new1.h5'
 
 if __name__ == '__main__':
 	

@@ -26,4 +26,4 @@ print(f'Model took {time.time() - initial} seconds to load.')
 for path in sys.argv[1:]:
 	initial = time.time()
 	prediction = predict(model, wav2mfcc(path))
-	print(f'Prediction for {path}: {LABELS[np.argmax(prediction)]}{prediction}; prediction took {time.time() - initial} seconds.')
+	print(f'Prediction for {path}: {LABELS[np.argmax(prediction)]}; {prediction}; prediction took {time.time() - initial} seconds.')
