@@ -8,152 +8,88 @@ from keras.utils import to_categorical
 from keras import regularizers
 import time
 
-# Second dimension of the feature is dim2
-feature_dim_2 = 11
+MODEL_NAME = "alpha"
+DATA_PATH = "preprocessed/"
+TEMP = "temp"
+CLASSES = ["car_horn", "dog_bark", "gun_shot", "jackhammer", "siren"]
 
-# # Feature dimension
-feature_dim_1 = 20
-
-# Hyperparameters
-n_filters_1 = 32
-n_filters_2 = 64
-d_filter = 2
-p_drop_1 = 0.25
-p_drop_2 = 0.50
-reg = 0.002
-
-channel = 1
-epochs = 100
-batch_size = 72
+input_shape = (64, 64, 3)
+epochs = 15
+batch_size = 32
 verbose = 1
-num_classes = 4
 
-# Output: Convolutional Neural Network to train on MFCCs
+# Output: Convolutional Neural Network to train on Mel Spectrograms
 def get_model():
-	'''
+	
 	model = Sequential()
-	model.add(Conv2D(32, kernel_size=(2, 2), activation='relu', input_shape=(feature_dim_1, feature_dim_2, channel)))
-	model.add(Conv2D(48, kernel_size=(2, 2), activation='relu'))
-	model.add(Conv2D(120, kernel_size=(2, 2), activation='relu'))
+
+	# First Convolutional layer
+	model.add(Conv2D(32, (3, 3), padding='same', input_shape=(64,64,3)))
+	model.add(Activation('relu'))
+
+	# Second Convolutional layer
+	model.add(Conv2D(64, (3, 3)))
+	model.add(Activation('relu'))
 	model.add(MaxPooling2D(pool_size=(2, 2)))
-	model.add(Dropout(0.4))
-	model.add(Flatten())
-	model.add(Dense(128, activation='relu'))
-	model.add(Dropout(0.4))
-	model.add(Dense(64, activation='relu'))
+	model.add(Dropout(0.25))
+
+	# Third Convolutional layer
+	model.add(Conv2D(128, (3, 3), padding='same'))
+	model.add(Activation('relu'))
+
+	# Fourth Convolutional layer
+	model.add(Conv2D(128, (3, 3)))
+	model.add(Activation('relu'))
+	model.add(MaxPooling2D(pool_size=(2, 2)))
 	model.add(Dropout(0.5))
-	model.add(Dense(num_classes, activation='softmax'))
-	model.compile(loss=keras.losses.categorical_crossentropy,
-				  optimizer=keras.optimizers.Adadelta(),
-				  metrics=['accuracy'])
-	return model
-	'''
+
+	model.add(Flatten())
 	
-	model = Sequential()
-	## NET MODEL 0:
-	#
-	# INPUT -> [CONV -> RELU -> CONV -> RELU -> POLL] ->
-	# -> [CONV -> RELU -> CONV -> RELU -> POLL] -> FC -> RELU -> FC
-	#
-	# - IMPLEMENTED METHOD-
+	# First Dense layer
+	model.add(Dense(512))
+	model.add(Activation('relu'))
+	model.add(Dropout(0.5))
 
-	# First layer
-	model.add(Conv2D(n_filters_1, kernel_size=(d_filter, d_filter), activation='relu', kernel_regularizer=regularizers.l2(reg), input_shape=(feature_dim_1, feature_dim_2, channel)))
-	model.add(BatchNormalization())
-
-	# Second layer
-	model.add(Conv2D(n_filters_1, kernel_size=(d_filter, d_filter), activation='relu', kernel_regularizer=regularizers.l2(reg)))
-	model.add(BatchNormalization())
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	# Drop layer
-	model.add(Dropout(p_drop_1))
-	
-	# Third layer
-	model.add(Conv2D(n_filters_2, kernel_size=(d_filter, d_filter), activation='relu', kernel_regularizer=regularizers.l2(reg)))
-	model.add(BatchNormalization())
-
-	# Fouth layer
-	model.add(Conv2D(n_filters_2, kernel_size=(d_filter, d_filter), activation='relu', kernel_regularizer=regularizers.l2(reg)))
-	model.add(BatchNormalization())
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	# Drop layer
-	model.add(Dropout(p_drop_1))
-
-	## Used to flat the input (1, 10, 2, 2) -> (1, 40)
-	model.add(Flatten())
-
-	# Full Connected layer
-	model.add(Dense(256, activation='relu', kernel_regularizer=regularizers.l2(reg)))
-	# Drop layer
-	model.add(Dropout(p_drop_2))
-	# Full Connected layer
-	model.add(Dense(512, activation='relu', kernel_regularizer=regularizers.l2(reg)))
-	# Drop layer
-	model.add(Dropout(p_drop_2))
-	# Output Full Connected layer
-	model.add(Dense(num_classes, activation='softmax'))
-	model.compile(loss='categorical_crossentropy',
-			  optimizer=SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=True),
-			  metrics=['accuracy'])
+	# Output layer
+	model.add(Dense(len(CLASSES), activation='softmax'))
+	model.compile(keras.optimizers.rmsprop(lr=0.0005, decay=1e-6),loss="categorical_crossentropy",metrics=["accuracy"])
 
 	return model
 
-def light_model():
-	model = Sequential()
+# Predicts one sample
+def predict(file, model):
+	sample = librosa2mfcc(file)
+	sample_reshaped = sample.reshape(1, *input_shape)
+	return CLASSES[np.argmax(model.predict(sample_reshaped))]
 
-	model.add(Conv2D(n_filters_1, kernel_size=(d_filter, d_filter), activation='relu', kernel_regularizer=regularizers.l2(reg), input_shape=(feature_dim_1, feature_dim_2, channel)))
-	model.add(BatchNormalization())
+# Used to copy images into temporary folder
+def copy_images(start, destination):
+	if not os.path.exists(destination): os.system(f"mkdir {destination}")
+	os.system(f"cp -r {start}/* {destination}")
 
-	# Second layer
-	model.add(Conv2D(n_filters_1, kernel_size=(d_filter, d_filter), activation='relu', kernel_regularizer=regularizers.l2(reg)))
-	model.add(BatchNormalization())
-	model.add(MaxPooling2D(pool_size=(2, 2)))
-	# Drop layer
-	model.add(Dropout(p_drop_1))
-
-	## Used to flat the input (1, 10, 2, 2) -> (1, 40)
-	model.add(Flatten())
-
-	# Full Connected layer
-	model.add(Dense(128, activation='relu', kernel_regularizer=regularizers.l2(reg)))
-	# Drop layer
-	model.add(Dropout(p_drop_2))
-	# Full Connected layer
-	model.add(Dense(32, activation='relu', kernel_regularizer=regularizers.l2(reg)))
-	# Drop layer
-	model.add(Dropout(p_drop_2))
-	# Output Full Connected layer
-	model.add(Dense(num_classes, activation='softmax'))
-	model.compile(loss='categorical_crossentropy',
-			  optimizer=SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=True),
-			  metrics=['accuracy'])
-
-	return model
-
-def test_model():
-	model = Sequential()
-	model.add(Conv2D(8, kernel_size=(2, 2), activation='relu', kernel_regularizer=regularizers.l2(reg), input_shape=(feature_dim_1, feature_dim_2, channel)))
-	model.add(Flatten())
-	model.add(Dense(num_classes, activation='softmax'))
-	model.compile(loss='categorical_crossentropy',
-			  optimizer=SGD(lr=0.001, decay=1e-6, momentum=0.9, nesterov=True),
-			  metrics=['accuracy'])
-	return model
 
 if __name__ == '__main__':
 
-	X, y = get_all_data()
+	# Copy images into main training directory
+	for train_dir in os.listdir(DATA_PATH):
+		copy_images(f"{DATA_PATH}{train_dir}", TEMP)
 	
-	# Reshaping to perform 2D convolution
-	X = X.reshape(X.shape[0], feature_dim_1, feature_dim_2, channel)
-	y_hot = to_categorical(y)
+	train_generator = train_gen.flow_from_directory(
+					        TEMP,
+					        target_size=(64, 64),
+					        batch_size=batch_size,
+					        shuffle=True,
+					        class_mode="categorical")
+	STEP_SIZE_TRAIN = train_generator.n // train_generator.batch_size
 	
 	# Train model
-	model = light_model()
+	model = get_model()
 	initial = time.time()
-	history = model.fit(X, y_hot, batch_size=batch_size, epochs=epochs, verbose=verbose)
-	print('Training took {} seconds.'.format(time.time() - initial))
-	model.save('model.h5')
+	history = history = model.fit_generator(generator=train_generator,
+						                    steps_per_epoch=STEP_SIZE_TRAIN,
+						                    epochs=epochs)
+	print(f"Training took {time.time() - initial} seconds.")
+	model.save(f'{MODEL_NAME}/{MODEL_NAME}.h5')
 
 	#  Plot accuracy
 	plt.plot(history.history['acc'])
@@ -168,3 +104,6 @@ if __name__ == '__main__':
 	plt.ylabel('loss')
 	plt.xlabel('epoch')
 	plt.show()
+
+	# Clean temporary directory
+	os.system(f"rm -r {TEMP}/*")
